@@ -5,7 +5,9 @@ using UnityEngine.U2D;
 
 struct GridInfo
 {
+    // Grid size in tiles
     public Vector2Int GridDimensions;
+    // Tiles size in world units
     public Vector2 TileSize;
 }
 
@@ -158,24 +160,25 @@ public class WorldController : MonoBehaviour
 
     private void CreateSideColliders(GridInfo gridInfo)
     {
-        const int COLLIDER_THICKNESS = 10;
+        // width in world units
+        Vector2 halfGridWidth = gridInfo.GridDimensions * gridInfo.TileSize / 2;
 
-        //use half or full width?
-        Vector2 halfWidth = (gridInfo.TileSize * gridInfo.GridDimensions) / 2;
+        // We want to add half a tile so the collider is aligned with the world tiles
+        // We then want to add another tile to push the colliders outwards by one tile spacing
+        // if two collider starts side by side, they are considered touching and the trigger callback is fired
+        float absoluteLRPosition = halfGridWidth.y + gridInfo.TileSize.y * 1.5f;
+        float absoluteUDPosition = halfGridWidth.x + gridInfo.TileSize.x * 1.5f;
 
-        Vector2 verticalSize = new Vector2(COLLIDER_THICKNESS, halfWidth.y * 2);
-        Vector2 horizontalSize = new Vector2(halfWidth.x * 2, COLLIDER_THICKNESS);
+        // Left/Right, Up/Down
+        Vector2 LRColliderSize = new Vector2(gridInfo.TileSize.x, halfGridWidth.y * 2 + gridInfo.TileSize.y * 2);
+        Vector2 UDColliderSize = new Vector2(halfGridWidth.x * 2 + gridInfo.TileSize.x * 2, gridInfo.TileSize.y);
 
-        float absoluteHorizontalPosition = halfWidth.x + gridInfo.TileSize.x;
-        float absoluteVerticalPosition = halfWidth.y + gridInfo.TileSize.y;
-
-        AddCollider(out _leftCollider, verticalSize, new Vector2(-absoluteHorizontalPosition, 0));
-        AddCollider(out _rightCollider, verticalSize, new Vector2(absoluteHorizontalPosition, 0));
-        AddCollider(out _upCollider, horizontalSize, new Vector2(0, -absoluteVerticalPosition));
-        AddCollider(out _downCollider, horizontalSize, new Vector2(0, absoluteVerticalPosition));
+        AddCollider(out _leftCollider, LRColliderSize, new Vector2(-absoluteUDPosition, 0));
+        AddCollider(out _rightCollider, LRColliderSize, new Vector2(absoluteUDPosition, 0));
+        AddCollider(out _upCollider, UDColliderSize, new Vector2(0, -absoluteLRPosition));
+        AddCollider(out _downCollider, UDColliderSize, new Vector2(0, absoluteLRPosition));
     }
 
-    //inline?
     private void AddCollider(out BoxCollider2D collider, Vector2 size, Vector2 offset)
     {
         collider = this.transform.AddComponent<BoxCollider2D>();
