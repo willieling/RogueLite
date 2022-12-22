@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -9,6 +10,55 @@ struct GridInfo
     public Vector2Int GridDimensions;
     // Tiles size in world units
     public Vector2 TileSize;
+}
+
+struct TilePositionFrameInfo
+{
+    // The downleft most tile position
+    public Vector3 MinPosition;
+    // The up right most tile position
+    public Vector3 MaxPosition;
+
+    private readonly List<WorldTile> _mapTiles;
+
+    public TilePositionFrameInfo(List<WorldTile> mapTiles) : this()
+    {
+        _mapTiles = mapTiles ?? throw new ArgumentNullException(nameof(mapTiles));
+    }
+
+    public bool HasUpdatedThisFrame { get; private set; }
+
+    public void Clear()
+    {
+        HasUpdatedThisFrame = false;
+    }
+
+    public void Update()
+    {
+        if(HasUpdatedThisFrame)
+        {
+            return;
+        }
+
+        HasUpdatedThisFrame = true;
+
+        MinPosition = _mapTiles[0].transform.position;
+        MaxPosition = _mapTiles[0].transform.position;
+        foreach(WorldTile tile in _mapTiles)
+        {
+            if(tile.transform.position.x < MinPosition.x
+                || tile.transform.position.y < MinPosition.y)
+            {
+                MinPosition = tile.transform.position;
+            }
+
+            if (tile.transform.position.x > MaxPosition.x
+                || tile.transform.position.y > MaxPosition.y)
+            {
+                MaxPosition = tile.transform.position;
+            }
+        }
+    }
 }
 
 /**
@@ -32,6 +82,9 @@ public class WorldController : MonoBehaviour
     const FullScreenMode SCREEN_MODE = FullScreenMode.ExclusiveFullScreen;
     const int REFRESH_RATE = 60;
 
+    public static WorldController Instance { get { return _instance; } }
+    private static WorldController _instance;
+
     [SerializeField]
     private float _speed = 0.05f;
     [SerializeField]
@@ -46,13 +99,13 @@ public class WorldController : MonoBehaviour
     private BoxCollider2D _downCollider;
 
     private GridInfo _gridInfo;
-    // When we move more than tile, we want to move everything that's offscreen to the opposite side.
-    // We do this to maintain the illusion that the player is moving in the world.
-    private int _internalTilePosition;
+    private TilePositionFrameInfo tileFrameInfo;
 
     // Start is called before the first frame update
     void Awake()
     {
+        _instance = this;
+
         this.transform.position.Set(this.transform.position.x, this.transform.position.y, _tilesData.TileDepth);
 
         Camera camera = Camera.main;
@@ -65,13 +118,15 @@ public class WorldController : MonoBehaviour
 
         Screen.SetResolution(HEIGHT, WIDTH, SCREEN_MODE, REFRESH_RATE);
 
-        GridInfo gridInfo = FillFrustrumWithWorldTiles(camera);
+        _gridInfo = FillFrustrumWithWorldTiles(camera);
 
         /*
          * We need to setup colliders encasing the grid
          * if a tile overlaps with a collider, it gets moved to the other side
          */
-        CreateSideColliders(gridInfo);
+        CreateSideColliders();
+
+        tileFrameInfo = new TilePositionFrameInfo(_mapTiles);
     }
 
     // Update is called once per frame
@@ -84,6 +139,47 @@ public class WorldController : MonoBehaviour
         {
             tile.transform.Translate(horizontal * _speed, vertical * _speed, 0);
         }
+
+        tileFrameInfo.Clear();
+    }
+
+    public void NotifyWorldTilecollided(WorldTile tile, Collider2D hitCollider)
+    {
+        tileFrameInfo.Update();
+
+        Vector2 position = new Vector2();
+
+        // check each collider because we may hit more than one
+        if (IsSameCollider(hitCollider, _leftCollider))
+        {
+            position.x = tileFrameInfo.MaxPosition.x + _gridInfo.TileSize.x;
+            position.y = tile.transform.position.y;
+        }
+        else if(IsSameCollider(hitCollider, _rightCollider))
+        {
+            position.x = tileFrameInfo.MinPosition.x - _gridInfo.TileSize.x;
+            position.y = tile.transform.position.y;
+        }
+        else if(IsSameCollider(hitCollider, _upCollider))
+        {
+            position.x = tile.transform.position.x;
+            position.y = tileFrameInfo.MinPosition.y - _gridInfo.TileSize.y;
+        }
+        else if(IsSameCollider(hitCollider, _downCollider))
+        {
+            position.x = tile.transform.position.x;
+            position.y = tileFrameInfo.MaxPosition.y + _gridInfo.TileSize.y;
+        }
+
+        //it's not the right position
+        tile.transform.SetPositionAndRotation(position, Quaternion.identity);
+    }
+
+    private bool IsSameCollider(Collider2D collider, BoxCollider2D other)
+    {
+        return collider is BoxCollider2D boxCollider
+            && boxCollider.size == other.size
+            && boxCollider.offset == other.offset;
     }
 
     // Cover the entire frustum with world tiles and return the size of the grid (in world tiles)
@@ -109,7 +205,7 @@ public class WorldController : MonoBehaviour
         Vector3 halfGridSize = new Vector3(
         ((tileGridDimension.x - 1) * tileSize.x) / 2
         , ((tileGridDimension.y - 1) * tileSize.y) / 2
-        , -10);
+        , 0);
 
         /*
          * We're going to spawn all the tiles in a grid and then move the camera into the middle of the grid
@@ -129,7 +225,7 @@ public class WorldController : MonoBehaviour
             }
         }
 
-        camera.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        camera.transform.SetPositionAndRotation(new Vector3(0, 0, -10), Quaternion.identity);
 
         return new GridInfo()
         {
@@ -158,30 +254,31 @@ public class WorldController : MonoBehaviour
         return new Vector2((screenMax.x - screenMin.x) / PPU, (screenMax.y - screenMin.y) / PPU);
     }
 
-    private void CreateSideColliders(GridInfo gridInfo)
+    private void CreateSideColliders()
     {
         // width in world units
-        Vector2 halfGridWidth = gridInfo.GridDimensions * gridInfo.TileSize / 2;
+        Vector2 halfGridWidth = _gridInfo.GridDimensions * _gridInfo.TileSize / 2;
 
         // We want to add half a tile so the collider is aligned with the world tiles
         // We then want to add another tile to push the colliders outwards by one tile spacing
         // if two collider starts side by side, they are considered touching and the trigger callback is fired
-        float absoluteLRPosition = halfGridWidth.y + gridInfo.TileSize.y * 1.5f;
-        float absoluteUDPosition = halfGridWidth.x + gridInfo.TileSize.x * 1.5f;
+        float absoluteLRPosition = halfGridWidth.y + _gridInfo.TileSize.y * 1.5f;
+        float absoluteUDPosition = halfGridWidth.x + _gridInfo.TileSize.x * 1.5f;
 
         // Left/Right, Up/Down
-        Vector2 LRColliderSize = new Vector2(gridInfo.TileSize.x, halfGridWidth.y * 2 + gridInfo.TileSize.y * 2);
-        Vector2 UDColliderSize = new Vector2(halfGridWidth.x * 2 + gridInfo.TileSize.x * 2, gridInfo.TileSize.y);
+        Vector2 LRColliderSize = new Vector2(_gridInfo.TileSize.x, halfGridWidth.y * 2 + _gridInfo.TileSize.y * 2);
+        Vector2 UDColliderSize = new Vector2(halfGridWidth.x * 2 + _gridInfo.TileSize.x * 2, _gridInfo.TileSize.y);
 
         AddCollider(out _leftCollider, LRColliderSize, new Vector2(-absoluteUDPosition, 0));
         AddCollider(out _rightCollider, LRColliderSize, new Vector2(absoluteUDPosition, 0));
-        AddCollider(out _upCollider, UDColliderSize, new Vector2(0, -absoluteLRPosition));
-        AddCollider(out _downCollider, UDColliderSize, new Vector2(0, absoluteLRPosition));
+        AddCollider(out _upCollider, UDColliderSize, new Vector2(0, absoluteLRPosition));
+        AddCollider(out _downCollider, UDColliderSize, new Vector2(0, -absoluteLRPosition));
     }
 
     private void AddCollider(out BoxCollider2D collider, Vector2 size, Vector2 offset)
     {
-        collider = this.transform.AddComponent<BoxCollider2D>();
+        collider = this.AddComponent<BoxCollider2D>();
+        collider.isTrigger = true;
         collider.size = size;
         collider.offset = offset;
     }
