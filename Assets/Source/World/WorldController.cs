@@ -110,7 +110,8 @@ public class WorldController : MonoBehaviour
 
         Camera camera = Camera.main;
         camera.aspect = ASPECT_RATIO;
-        camera.orthographicSize = 67.5f;    //figure out where this constant comes from
+        // half the camera's width in world units
+        camera.orthographicSize = WIDTH / PPU / 2;
 
         PixelPerfectCamera ppCam = camera.GetComponent<PixelPerfectCamera>();
         ppCam.assetsPPU = PPU;
