@@ -110,6 +110,7 @@ public class WorldController : MonoBehaviour
 
         Camera camera = Camera.main;
         camera.aspect = ASPECT_RATIO;
+        camera.orthographicSize = 67.5f;    //figure out where this constant comes from
 
         PixelPerfectCamera ppCam = camera.GetComponent<PixelPerfectCamera>();
         ppCam.assetsPPU = PPU;
@@ -225,7 +226,7 @@ public class WorldController : MonoBehaviour
             }
         }
 
-        camera.transform.SetPositionAndRotation(new Vector3(0, 0, -10), Quaternion.identity);
+        camera.transform.SetPositionAndRotation(new Vector3(0, 0, -50), Quaternion.identity);
 
         return new GridInfo()
         {

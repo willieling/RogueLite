@@ -14,8 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _worldTilePrefab: {fileID: 4469095826847845236, guid: b8f3aec8480636b4ebc07559bdbac7bc, type: 3}
   _tiles:
-  - {fileID: 2800000, guid: 775e0b6bac87d7a4d9e22168101f952d, type: 3}
-  - {fileID: 2800000, guid: 7e7ff02a13044e945bee9be3fd3833a5, type: 3}
-  - {fileID: 2800000, guid: c9278652c98f6d74286bd214e2e7a1fd, type: 3}
-  - {fileID: 2800000, guid: c2b1cf049176851419900432728bb345, type: 3}
+  - {fileID: 2800000, guid: e2372e569d3660c479fc246056ef9774, type: 3}
   _tileDepth: 0
