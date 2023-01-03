@@ -134,6 +134,14 @@ PrefabInstance:
       propertyPath: Speed
       value: 0.01
       objectReference: {fileID: 0}
+    - target: {fileID: -517116554503988271, guid: 4cbf952309a10944bac4e0d87adfc02e, type: 3}
+      propertyPath: _projectileData
+      value: 
+      objectReference: {fileID: 11400000, guid: 39ab4cae0ecb5b7499e6ccbfb2913ffa, type: 2}
+    - target: {fileID: -517116554503988271, guid: 4cbf952309a10944bac4e0d87adfc02e, type: 3}
+      propertyPath: _projectileDataAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 39ab4cae0ecb5b7499e6ccbfb2913ffa, type: 2}
     - target: {fileID: 6496948966903816524, guid: 4cbf952309a10944bac4e0d87adfc02e, type: 3}
       propertyPath: m_RootOrder
       value: 1

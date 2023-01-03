@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEngine.Assertions;
 
-public class WorldTile : MonoBehaviour
+public class WorldTile : MonoBehaviour, PooledItem<WorldTile>
 {
     private SpriteRenderer _spriteRenderer;
     private WorldController _worldController;
+    private Pool<WorldTile> _owningPool;
 
     public SpriteRenderer SpriteRenderer { get { return _spriteRenderer; } }
 
@@ -23,5 +24,15 @@ public class WorldTile : MonoBehaviour
         Debug.Log($"{other.name}");
 
         _worldController.NotifyWorldTilecollided(this, other);
+    }
+
+    public void Initialize(Pool<WorldTile> owningPool)
+    {
+        _owningPool = owningPool;
+    }
+
+    public void Release()
+    {
+        _owningPool.Release(this);
     }
 }
