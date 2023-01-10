@@ -200,7 +200,8 @@ public class WorldController : MonoBehaviour
         tileGridDimension.x += SIDE_BUFFER;
         tileGridDimension.y += SIDE_BUFFER;
 
-        _mapTilePool = new Pool<WorldTile>("WorldTile", _tilesData.WorldTilePrefab, new Vector3(0, 0, -100), tileGridDimension.x * tileGridDimension.y);
+        _mapTilePool = new Pool<WorldTile>(_tilesData.WorldTilePrefab, new Vector3(0, 0, -100), tileGridDimension.x * tileGridDimension.y)
+            .SetName("WorldTile");
         _mapTiles = new List<WorldTile>(tileGridDimension.x * tileGridDimension.y);
 
         // We want the center of the grid to be at the world origin

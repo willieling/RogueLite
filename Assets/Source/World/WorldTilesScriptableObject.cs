@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class WorldTilesScriptableObject : ScriptableObject
 {
-    [MenuItem("Assets/Create/World Tiles Scriptable Object")]
+    [MenuItem("Assets/Create/Data Assets/World Tiles Scriptable Object")]
     public static void CreateMyAsset()
     {
         WorldTilesScriptableObject asset = ScriptableObject.CreateInstance<WorldTilesScriptableObject>();
